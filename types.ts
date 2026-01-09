@@ -14,14 +14,17 @@ export enum RequestCategory {
 }
 
 export type UserRole = 'STUDENT' | 'ADMIN';
+export type VerificationStatus = 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 export interface Student {
   id: string;
   name: string;
   email: string;
   university: string;
-  studentId?: string; // Verification field
-  isVerified: boolean;
+  studentId: string;
+  passcode: string;
+  verificationStatus: VerificationStatus;
+  idCardImage?: string;
   avatar: string;
   role: UserRole;
 }

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { FinancialRequest, UrgencyLevel } from '../types';
 import { Icons } from '../constants';
+import PaymentModal from './PaymentModal';
 
 interface RequestCardProps {
   request: FinancialRequest;
@@ -12,6 +13,7 @@ interface RequestCardProps {
 
 const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified, index }) => {
   const [donateAmount, setDonateAmount] = useState<string>('500');
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const progress = (request.raisedAmount / request.requestedAmount) * 100;
   
   const urgencyLabel = {
@@ -29,8 +31,12 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
   const handleDonateSubmit = () => {
     const amount = parseFloat(donateAmount);
     if (!isNaN(amount) && amount >= 1) {
-      onDonate(request.id, amount);
+      setIsPaymentOpen(true);
     }
+  };
+
+  const handlePaymentConfirm = () => {
+    onDonate(request.id, parseFloat(donateAmount));
   };
 
   return (
@@ -38,16 +44,12 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
       className={`pretty-card rounded-[2.5rem] overflow-hidden flex flex-col lg:flex-row min-h-[400px] animate-up`}
       style={{ animationDelay: `${index * 0.15}s` }}
     >
-      {/* Narrative Image Section */}
       <div className="relative w-full lg:w-2/5 h-64 lg:h-auto overflow-hidden">
         <img 
           src={request.imageUrl || 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800&auto=format&fit=crop'} 
           className="w-full h-full object-cover transition-transform duration-1000 hover:scale-110" 
           alt={request.title}
-          loading="lazy"
-          onError={(e) => {
-             (e.currentTarget as HTMLImageElement).src = `https://picsum.photos/seed/${request.id}/800/800`;
-          }}
+          onError={(e) => (e.currentTarget as HTMLImageElement).src = `https://picsum.photos/seed/${request.id}/800/800`}
         />
         <div className="absolute inset-0 bg-emerald-950/20"></div>
         <div className="absolute bottom-6 left-6 flex gap-2">
@@ -57,7 +59,6 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
         </div>
       </div>
 
-      {/* Detail Section */}
       <div className="flex-1 p-8 md:p-12 flex flex-col justify-between bg-white">
         <div>
           <div className="flex justify-between items-center mb-6">
@@ -74,16 +75,12 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
           </h3>
           
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1 shadow-sm">
-              {request.isAnonymous ? (
-                <span className="text-xl">👤</span>
-              ) : (
-                <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${request.studentName}&backgroundColor=d1fae5`} className="w-full h-full rounded-xl" alt="Donor" />
-              )}
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1 shadow-sm overflow-hidden">
+              <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${request.studentName}&backgroundColor=d1fae5`} className="w-full h-full" alt="Student" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
-                <span className="font-black text-emerald-900 leading-none">{request.isAnonymous ? 'Verified Anonymous Peer' : request.studentName}</span>
+                <span className="font-black text-emerald-900 leading-none">{request.isAnonymous ? 'Verified Peer' : request.studentName}</span>
                 <Icons.Verified />
               </div>
               <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-tighter mt-1">Verified Institution Status</span>
@@ -95,7 +92,6 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
           </p>
         </div>
 
-        {/* Progress & Contribution Logic */}
         <div className="space-y-8">
           <div className="space-y-3">
             <div className="flex justify-between items-end">
@@ -122,36 +118,39 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, onDonate, isVerified
 
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <div className="w-full sm:flex-1 relative group">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-400 font-black text-lg transition-colors group-focus-within:text-emerald-600">₹</span>
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-emerald-400 font-black text-lg">₹</span>
               <input 
                 type="number"
                 min="1"
-                step="any"
                 value={donateAmount}
                 onChange={(e) => setDonateAmount(e.target.value)}
-                placeholder="Amount (any value)"
                 className="w-full h-16 pl-12 pr-6 rounded-[1.5rem] bg-emerald-50/30 border border-emerald-100 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 text-lg font-black text-emerald-950 transition-all outline-none"
               />
             </div>
 
             <button
               onClick={handleDonateSubmit}
-              disabled={progress >= 100 || !donateAmount || parseFloat(donateAmount) < 1}
+              disabled={progress >= 100 || !isVerified}
               className={`w-full sm:w-auto px-10 h-16 rounded-[1.5rem] font-black text-[12px] uppercase tracking-[0.25em] transition-all flex items-center justify-center gap-3 ${
-                progress >= 100 
+                progress >= 100 || !isVerified
                   ? 'bg-emerald-100 text-emerald-300 cursor-not-allowed' 
                   : 'gradient-bg text-white hover:shadow-2xl hover:shadow-emerald-200 active:scale-95'
               }`}
             >
-              <span>{progress >= 100 ? 'Goal Met' : 'Back This Student'}</span>
-              {progress < 100 && <Icons.Urgent />}
+              <span>{progress >= 100 ? 'Goal Met' : (isVerified ? 'Back This Student' : 'Verify to Contribute')}</span>
+              {progress < 100 && isVerified && <Icons.Urgent />}
             </button>
           </div>
-          <p className="text-[10px] text-center text-emerald-300 font-bold italic tracking-wide">
-            Support is non-refundable and recorded on our verified student ledger.
-          </p>
         </div>
       </div>
+
+      <PaymentModal 
+        isOpen={isPaymentOpen} 
+        onClose={() => setIsPaymentOpen(false)}
+        onConfirm={handlePaymentConfirm}
+        amount={parseFloat(donateAmount)}
+        recipientName={request.isAnonymous ? 'Verified Peer' : request.studentName}
+      />
     </div>
   );
 };

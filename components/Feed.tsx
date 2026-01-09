@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { FinancialRequest, Student } from '../types';
+import React, { useState, useMemo } from 'react';
+import { FinancialRequest, Student, UrgencyLevel } from '../types';
+import { URGENCY_WEIGHTS } from '../constants';
 import RequestCard from './RequestCard';
 
 interface FeedProps {
@@ -10,6 +11,28 @@ interface FeedProps {
 }
 
 const Feed: React.FC<FeedProps> = ({ requests, onDonate, user }) => {
+  const [sortBy, setSortBy] = useState<'priority' | 'newest'>('priority');
+
+  const processedRequests = useMemo(() => {
+    const approved = requests.filter(r => r.status === 'APPROVED');
+    
+    if (sortBy === 'newest') {
+      return [...approved].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
+    // Default: Sort by Priority (Urgency Score)
+    return [...approved].sort((a, b) => {
+      const getScore = (req: FinancialRequest) => {
+        const urgencyWeight = URGENCY_WEIGHTS[req.urgency];
+        const fundingGap = (req.requestedAmount - req.raisedAmount) / req.requestedAmount;
+        return urgencyWeight + (fundingGap * 100);
+      };
+      return getScore(b) - getScore(a);
+    });
+  }, [requests, sortBy]);
+
   return (
     <div className="space-y-16 max-w-5xl mx-auto px-4 pb-20">
       {/* Hero Banner Section */}
@@ -36,7 +59,7 @@ const Feed: React.FC<FeedProps> = ({ requests, onDonate, user }) => {
           </p>
           <div className="flex flex-wrap gap-10 border-t border-white/10 pt-10">
             <div>
-              <p className="text-3xl font-black text-white">{requests.length}</p>
+              <p className="text-3xl font-black text-white">{processedRequests.length}</p>
               <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Active Requests</p>
             </div>
             <div>
@@ -56,26 +79,42 @@ const Feed: React.FC<FeedProps> = ({ requests, onDonate, user }) => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-emerald-100 pb-8">
           <div>
             <h2 className="text-3xl font-black text-emerald-950 tracking-tight">Support Needed</h2>
-            <p className="text-emerald-500 font-medium mt-1">Sorted by urgency and unmet funding gap.</p>
+            <p className="text-emerald-500 font-medium mt-1">
+              Showing {sortBy === 'priority' ? 'most critical cases first' : 'newest submissions first'}.
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.3em]">Sort Priority:</span>
             <div className="flex bg-white p-1 rounded-xl shadow-sm border border-emerald-50">
-              <button className="px-5 py-2 rounded-lg text-[9px] font-black bg-emerald-900 text-white uppercase tracking-widest shadow-md">Critical</button>
-              <button className="px-5 py-2 rounded-lg text-[9px] font-black text-emerald-400 uppercase tracking-widest">Newest</button>
+              <button 
+                onClick={() => setSortBy('priority')}
+                className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  sortBy === 'priority' ? 'bg-emerald-900 text-white shadow-md' : 'text-emerald-400 hover:text-emerald-600'
+                }`}
+              >
+                Critical
+              </button>
+              <button 
+                onClick={() => setSortBy('newest')}
+                className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                  sortBy === 'newest' ? 'bg-emerald-900 text-white shadow-md' : 'text-emerald-400 hover:text-emerald-600'
+                }`}
+              >
+                Newest
+              </button>
             </div>
           </div>
         </div>
 
         <div className="grid gap-12">
-          {requests.length > 0 ? (
-            requests.map((request, index) => (
+          {processedRequests.length > 0 ? (
+            processedRequests.map((request, index) => (
               <RequestCard 
                 key={request.id} 
                 index={index}
                 request={request} 
                 onDonate={onDonate}
-                isVerified={user?.isVerified || false}
+                isVerified={user?.verificationStatus === 'VERIFIED'}
               />
             ))
           ) : (

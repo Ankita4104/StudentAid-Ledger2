@@ -17,10 +17,11 @@ import AdminDashboard from './components/AdminDashboard';
 import VerificationModal from './components/VerificationModal';
 import CreateRequestModal from './components/CreateRequestModal';
 import { geminiService } from './services/geminiService';
-import { mockRequests as initialRequests, mockDonations as initialDonations, mockUsers } from './mockData';
+import { mockRequests as initialRequests, mockDonations as initialDonations, mockUsers as initialUsers } from './mockData';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<Student | null>(null);
+  const [allUsers, setAllUsers] = useState<Student[]>(initialUsers);
   const [requests, setRequests] = useState<FinancialRequest[]>(initialRequests);
   const [donations, setDonations] = useState<Donation[]>(initialDonations);
   const [view, setView] = useState<'feed' | 'dashboard' | 'admin'>('feed');
@@ -28,52 +29,50 @@ const App: React.FC = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('sa_user_v7');
-    const savedRequests = localStorage.getItem('sa_requests_v7');
-    const savedDonations = localStorage.getItem('sa_donations_v7');
+    const savedUser = localStorage.getItem('sa_user_v13');
+    const savedAllUsers = localStorage.getItem('sa_all_users_v13');
+    const savedRequests = localStorage.getItem('sa_requests_v13');
+    const savedDonations = localStorage.getItem('sa_donations_v13');
     
     if (savedUser) setUser(JSON.parse(savedUser));
+    
+    if (savedAllUsers) {
+      const parsedUsers = JSON.parse(savedAllUsers);
+      const hasAdmin = parsedUsers.some((u: any) => u.role === 'ADMIN');
+      if (!hasAdmin) {
+        setAllUsers([...parsedUsers, ...initialUsers.filter(u => u.role === 'ADMIN')]);
+      } else {
+        setAllUsers(parsedUsers);
+      }
+    } else {
+      setAllUsers(initialUsers);
+    }
+    
     if (savedRequests) setRequests(JSON.parse(savedRequests));
     if (savedDonations) setDonations(JSON.parse(savedDonations));
   }, []);
 
   useEffect(() => {
-    if (user) localStorage.setItem('sa_user_v7', JSON.stringify(user));
-    else localStorage.removeItem('sa_user_v7');
+    if (user) localStorage.setItem('sa_user_v13', JSON.stringify(user));
+    else localStorage.removeItem('sa_user_v13');
     
-    localStorage.setItem('sa_requests_v7', JSON.stringify(requests));
-    localStorage.setItem('sa_donations_v7', JSON.stringify(donations));
-  }, [user, requests, donations]);
+    localStorage.setItem('sa_all_users_v13', JSON.stringify(allUsers));
+    localStorage.setItem('sa_requests_v13', JSON.stringify(requests));
+    localStorage.setItem('sa_donations_v13', JSON.stringify(donations));
+  }, [user, allUsers, requests, donations]);
 
-  const sortedRequests = useMemo(() => {
-    return requests
-      .filter(r => r.status === 'APPROVED')
-      .sort((a, b) => {
-        const getScore = (req: FinancialRequest) => {
-          const urgencyWeight = URGENCY_WEIGHTS[req.urgency];
-          const fundingGap = (req.requestedAmount - req.raisedAmount) / req.requestedAmount;
-          return urgencyWeight + (fundingGap * 100);
-        };
-        return getScore(b) - getScore(a);
-      });
-  }, [requests]);
-
-  const handleLogin = (data: { name: string; role: UserRole; email: string; studentId: string }) => {
-    // Default university for the demo context based on email domain
-    const university = data.role === 'ADMIN' ? 'Admin Council' : (data.email.includes('iiita') ? 'IIIT Agartala' : 'NIT Agartala');
-    
-    const newUser: Student = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: data.name,
-      email: data.email,
-      university: university,
-      studentId: data.studentId,
-      isVerified: data.role === 'ADMIN', 
-      avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${data.name}&backgroundColor=d1fae5&shape1Color=059669`,
-      role: data.role
-    };
+  const handleLogin = (newUser: Student) => {
+    setAllUsers(prev => {
+      const exists = prev.find(u => u.email === newUser.email);
+      if (exists) return prev;
+      return [...prev, newUser];
+    });
     setUser(newUser);
-    setView(data.role === 'ADMIN' ? 'admin' : 'feed');
+    if (newUser.role === 'ADMIN') {
+      setView('admin');
+    } else {
+      setView(newUser.verificationStatus === 'VERIFIED' ? 'feed' : 'dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -83,11 +82,6 @@ const App: React.FC = () => {
 
   const handleDonate = (requestId: string, amount: number) => {
     if (!user) return;
-    if (!user.isVerified) {
-      setIsVerificationModalOpen(true);
-      return;
-    }
-
     const newDonation: Donation = {
       id: Math.random().toString(36).substr(2, 9),
       requestId,
@@ -96,7 +90,6 @@ const App: React.FC = () => {
       amount,
       timestamp: new Date().toISOString(),
     };
-
     setDonations([...donations, newDonation]);
     setRequests(requests.map(req => 
       req.id === requestId 
@@ -106,13 +99,7 @@ const App: React.FC = () => {
   };
 
   const handleCreateRequest = async (newRequest: Partial<FinancialRequest>) => {
-    if (!user) return;
-    if (!user.isVerified) {
-      setIsVerificationModalOpen(true);
-      return;
-    }
-
-    // Get highly relevant image via keyword search
+    if (!user || user.verificationStatus !== 'VERIFIED') return;
     const keyword = await geminiService.suggestImageKeyword(newRequest.title || '', newRequest.description || '');
     const dynamicImageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(keyword)}`;
 
@@ -140,48 +127,47 @@ const App: React.FC = () => {
     setIsRequestModalOpen(false);
   };
 
-  const handleUpdateStatus = (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    setRequests(requests.map(r => r.id === requestId ? { ...r, status } : r));
-  };
-
-  const handleVerify = (university: string) => {
+  const handleVerifySubmission = (university: string, idCardImage: string) => {
     if (user) {
-      setUser({ ...user, isVerified: true, university });
+      const updatedUser: Student = { ...user, verificationStatus: 'VERIFIED', university, idCardImage };
+      setUser(updatedUser);
+      setAllUsers(allUsers.map(u => u.id === user.id ? updatedUser : u));
       setIsVerificationModalOpen(false);
+      setView('feed');
     }
   };
 
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={handleLogin} existingUsers={allUsers} />;
   }
 
   return (
     <div className="min-h-screen">
       <Header 
         user={user} 
-        activeView={view === 'admin' ? 'feed' : view} 
+        activeView={view} 
         onViewChange={(v) => setView(v as any)} 
         onOpenRequest={() => setIsRequestModalOpen(true)}
         onLogout={handleLogout}
       />
 
       <main className="max-w-6xl mx-auto px-6 py-12 md:py-16">
-        {user.role === 'STUDENT' && !user.isVerified && (
-          <div className="pretty-card rounded-[3rem] p-10 mb-20 flex flex-col lg:flex-row items-center justify-between gap-10 border-emerald-100 bg-white shadow-2xl shadow-emerald-900/5">
+        {user.role === 'STUDENT' && user.verificationStatus !== 'VERIFIED' && (
+          <div className="pretty-card rounded-[3rem] p-10 mb-20 flex flex-col lg:flex-row items-center justify-between gap-10 border-emerald-100 bg-emerald-50/20 shadow-2xl shadow-emerald-900/5 animate-reveal">
             <div className="flex items-center gap-8">
-              <div className="w-20 h-20 bg-emerald-950 text-white rounded-3xl shadow-2xl flex items-center justify-center text-4xl group-hover:rotate-6 transition-transform">
-                 📄
-              </div>
+              <div className="w-20 h-20 bg-emerald-950 text-white rounded-3xl shadow-2xl flex items-center justify-center text-4xl">🛡️</div>
               <div className="max-w-md">
-                <h3 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">Identity Audit Required</h3>
-                <p className="text-base font-semibold text-emerald-600/70 mt-3 leading-relaxed">Official verification of institutional credentials (NIT/IIIT Agartala) is mandatory to start requesting aid.</p>
+                <h3 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">Instant Activation</h3>
+                <p className="text-base font-semibold text-emerald-600/70 mt-3 leading-relaxed">
+                  Join the peer support network. Upload your student ID for automatic AI background clearing to start requesting or contributing aid.
+                </p>
               </div>
             </div>
             <button 
               onClick={() => setIsVerificationModalOpen(true)}
-              className="w-full lg:w-auto px-12 py-5 gradient-bg text-white rounded-[1.5rem] hover:shadow-2xl hover:scale-105 transition-all font-black text-[11px] uppercase tracking-[0.25em] shadow-xl shadow-emerald-200"
+              className="w-full lg:w-auto px-12 py-5 gradient-bg text-white rounded-[1.5rem] hover:shadow-2xl hover:scale-105 transition-all font-black text-[11px] uppercase tracking-[0.25em]"
             >
-              Verify Identity
+              Verify My Profile
             </button>
           </div>
         )}
@@ -189,11 +175,12 @@ const App: React.FC = () => {
         {view === 'admin' && user.role === 'ADMIN' ? (
           <AdminDashboard 
             requests={requests.filter(r => r.status === 'PENDING')} 
-            onUpdateStatus={handleUpdateStatus} 
+            allRequests={requests}
+            onUpdateStatus={(id, status) => setRequests(requests.map(r => r.id === id ? { ...r, status } : r))}
           />
         ) : view === 'feed' ? (
           <Feed 
-            requests={sortedRequests} 
+            requests={requests} 
             onDonate={handleDonate} 
             user={user}
           />
@@ -209,7 +196,7 @@ const App: React.FC = () => {
       <footer className="mt-40 pb-20 text-center">
         <div className="inline-block px-10 py-5 rounded-[2rem] bg-white border border-emerald-50 shadow-sm">
           <p className="font-black text-[10px] uppercase tracking-[0.5em] text-emerald-200">
-            StudentAid Ledger • NIT & IIIT Agartala Peer Support Network
+            StudentAid Ledger • Peer Support Network
           </p>
         </div>
       </footer>
@@ -217,7 +204,7 @@ const App: React.FC = () => {
       <VerificationModal 
         isOpen={isVerificationModalOpen} 
         onClose={() => setIsVerificationModalOpen(false)} 
-        onVerify={handleVerify}
+        onVerify={handleVerifySubmission}
       />
       
       <CreateRequestModal 
