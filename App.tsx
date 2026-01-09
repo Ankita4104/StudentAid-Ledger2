@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Student, 
@@ -28,11 +27,14 @@ const App: React.FC = () => {
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
+  // v16 ensures a fresh state for the Netlify deployment
+  const STORAGE_KEY_PREFIX = 'sa_v16_';
+
   useEffect(() => {
-    const savedUser = localStorage.getItem('sa_user_v15');
-    const savedAllUsers = localStorage.getItem('sa_all_users_v15');
-    const savedRequests = localStorage.getItem('sa_requests_v15');
-    const savedDonations = localStorage.getItem('sa_donations_v15');
+    const savedUser = localStorage.getItem(`${STORAGE_KEY_PREFIX}user`);
+    const savedAllUsers = localStorage.getItem(`${STORAGE_KEY_PREFIX}all_users`);
+    const savedRequests = localStorage.getItem(`${STORAGE_KEY_PREFIX}requests`);
+    const savedDonations = localStorage.getItem(`${STORAGE_KEY_PREFIX}donations`);
     
     if (savedUser) setUser(JSON.parse(savedUser));
     
@@ -53,12 +55,12 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) localStorage.setItem('sa_user_v15', JSON.stringify(user));
-    else localStorage.removeItem('sa_user_v15');
+    if (user) localStorage.setItem(`${STORAGE_KEY_PREFIX}user`, JSON.stringify(user));
+    else localStorage.removeItem(`${STORAGE_KEY_PREFIX}user`);
     
-    localStorage.setItem('sa_all_users_v15', JSON.stringify(allUsers));
-    localStorage.setItem('sa_requests_v15', JSON.stringify(requests));
-    localStorage.setItem('sa_donations_v15', JSON.stringify(donations));
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}all_users`, JSON.stringify(allUsers));
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}requests`, JSON.stringify(requests));
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}donations`, JSON.stringify(donations));
   }, [user, allUsers, requests, donations]);
 
   const handleLogin = (newUser: Student) => {
@@ -157,9 +159,9 @@ const App: React.FC = () => {
             <div className="flex items-center gap-8">
               <div className="w-20 h-20 bg-emerald-950 text-white rounded-3xl shadow-2xl flex items-center justify-center text-4xl">🛡️</div>
               <div className="max-w-md">
-                <h3 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">Instant Activation</h3>
+                <h3 className="text-3xl font-black text-emerald-950 tracking-tight leading-none">Identity Scan</h3>
                 <p className="text-base font-semibold text-emerald-600/70 mt-3 leading-relaxed">
-                  Join the peer support network. Upload your student ID for automatic AI background clearing to start requesting or contributing aid.
+                  Join the peer-to-peer ledger. Upload your student identity to unlock verified contribution and request features across our network.
                 </p>
               </div>
             </div>
