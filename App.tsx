@@ -27,8 +27,8 @@ const App: React.FC = () => {
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-  // v16 ensures a fresh state for the Netlify deployment
-  const STORAGE_KEY_PREFIX = 'sa_v16_';
+  // v17 ensures a clean state for the new deployment
+  const STORAGE_KEY_PREFIX = 'sa_v17_';
 
   useEffect(() => {
     const savedUser = localStorage.getItem(`${STORAGE_KEY_PREFIX}user`);

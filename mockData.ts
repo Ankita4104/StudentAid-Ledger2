@@ -93,7 +93,7 @@ export const mockRequests: FinancialRequest[] = [
     title: 'Backlog Exam Fees Support',
     category: RequestCategory.FEES,
     imageUrl: 'https://images.unsplash.com/photo-1454165833767-017546954de4?q=80&w=800&auto=format&fit=crop',
-    description: 'Need to clear the registration fees for 3 backlog papers to be eligible for campus placements next month.',
+    description: 'Need to clear the registration fees for 3 backlog papers to be eligible for campus placements next week.',
     requestedAmount: 4500,
     raisedAmount: 0,
     urgency: UrgencyLevel.HIGH,
