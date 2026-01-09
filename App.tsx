@@ -29,10 +29,10 @@ const App: React.FC = () => {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('sa_user_v14');
-    const savedAllUsers = localStorage.getItem('sa_all_users_v14');
-    const savedRequests = localStorage.getItem('sa_requests_v14');
-    const savedDonations = localStorage.getItem('sa_donations_v14');
+    const savedUser = localStorage.getItem('sa_user_v15');
+    const savedAllUsers = localStorage.getItem('sa_all_users_v15');
+    const savedRequests = localStorage.getItem('sa_requests_v15');
+    const savedDonations = localStorage.getItem('sa_donations_v15');
     
     if (savedUser) setUser(JSON.parse(savedUser));
     
@@ -53,12 +53,12 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) localStorage.setItem('sa_user_v14', JSON.stringify(user));
-    else localStorage.removeItem('sa_user_v14');
+    if (user) localStorage.setItem('sa_user_v15', JSON.stringify(user));
+    else localStorage.removeItem('sa_user_v15');
     
-    localStorage.setItem('sa_all_users_v14', JSON.stringify(allUsers));
-    localStorage.setItem('sa_requests_v14', JSON.stringify(requests));
-    localStorage.setItem('sa_donations_v14', JSON.stringify(donations));
+    localStorage.setItem('sa_all_users_v15', JSON.stringify(allUsers));
+    localStorage.setItem('sa_requests_v15', JSON.stringify(requests));
+    localStorage.setItem('sa_donations_v15', JSON.stringify(donations));
   }, [user, allUsers, requests, donations]);
 
   const handleLogin = (newUser: Student) => {
@@ -101,7 +101,7 @@ const App: React.FC = () => {
   const handleCreateRequest = async (newRequest: Partial<FinancialRequest>) => {
     if (!user || user.verificationStatus !== 'VERIFIED') return;
     const keyword = await geminiService.suggestImageKeyword(newRequest.title || '', newRequest.description || '');
-    const dynamicImageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(keyword)}`;
+    const dynamicImageUrl = `https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=800&auto=format&fit=crop&sig=${Math.random()}`;
 
     const fullRequest: FinancialRequest = {
       id: Math.random().toString(36).substr(2, 9),
