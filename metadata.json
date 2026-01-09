@@ -1,0 +1,7 @@
+{
+  "name": "Copy of StudentAid: Urgent Financial Support",
+  "description": "A verified student-only platform that prioritizes urgent financial needs through transparent, system-recorded micro-donations.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
