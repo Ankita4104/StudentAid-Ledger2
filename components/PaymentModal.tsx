@@ -55,21 +55,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onConfirm,
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3 ml-1">Select Gateway</label>
-              <div className="space-y-3 relative">
+              <div className="space-y-3">
                 {methods.map(m => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id as any)}
-                    className={`w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all relative z-10 cursor-pointer ${
+                    className={`w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer select-none group ${
                       method === m.id 
                         ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/10' 
-                        : 'border-emerald-50 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                        : 'border-emerald-50 bg-white hover:border-emerald-200 hover:bg-emerald-50/30'
                     }`}
                   >
-                    <span className="text-2xl pointer-events-none">{m.icon}</span>
+                    <span className="text-2xl pointer-events-none group-hover:scale-110 transition-transform">{m.icon}</span>
                     <span className="font-bold text-emerald-950 pointer-events-none">{m.label}</span>
-                    <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center pointer-events-none ${method === m.id ? 'border-emerald-600' : 'border-emerald-100'}`}>
+                    <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center pointer-events-none transition-colors ${method === m.id ? 'border-emerald-600' : 'border-emerald-100'}`}>
                       {method === m.id && <div className="w-2.5 h-2.5 bg-emerald-600 rounded-full animate-scale-in"></div>}
                     </div>
                   </button>
